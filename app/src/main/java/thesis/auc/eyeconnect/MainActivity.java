@@ -132,6 +132,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public void onCameraViewStarted(int width, int height) {
+        grayscaleImage = new Mat(height,width,CvType.CV_8UC4);
         String proto = getPath("deploy.prototxt.txt",this);
         String weights = getPath("res10_300x300_ssd_iter_140000.caffemodel",this);
         net = Dnn.readNetFromCaffe(proto,weights);
@@ -145,13 +146,17 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public Mat onCameraFrame(Mat inputFrame) {
-
-        int height = inputFrame.height();
+        // Get a new frame
+        Imgproc.cvtColor(inputFrame, grayscaleImage, Imgproc.COLOR_RGBA2RGB);
+        int height = grayscaleImage.height();
         int width = 400;
-        Imgproc.resize(inputFrame,inputFrame,new Size(width,height));
+        Imgproc.resize(grayscaleImage,grayscaleImage,new Size(width,height));
         Mat blobImage = new Mat();
-        Imgproc.resize(inputFrame,blobImage,new Size(300,300));
-        Mat blob = Dnn.blobFromImage(inputFrame,1.0, new Size(300, 300),new Scalar(104.0,177.0,123.0));
+        Imgproc.resize(grayscaleImage,blobImage,new Size(300,300));
+        Log.i("nonos1",String.valueOf(inputFrame.size()));
+        Log.i("nonos2",String.valueOf(blobImage.size()));
+        Log.i("nonos3",String.valueOf(grayscaleImage.type()));
+        Mat blob = Dnn.blobFromImage(blobImage,1.0, new Size(300, 300),new Scalar(104.0,177.0,123.0));
         net.setInput(blob);
         Mat detections = net.forward();
         int cols = inputFrame.cols();
@@ -159,19 +164,21 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         detections = detections.reshape(1,(int)detections.total() / 7);
         for(int i=0; i < detections.rows();++i){
             double confidence = detections.get(i,2)[0];
-            int classId = (int)detections.get(i,1)[0];
-            int left = (int) (detections.get(i,3)[0] * cols);
-            int top = (int) (detections.get(i,4)[0] * rows);
-            int right = (int) (detections.get(i,5)[0] * cols);
-            int bottom = (int) (detections.get(i,6)[0] * rows);
-            Imgproc.rectangle(inputFrame,new Point(left, top), new Point(right, bottom),
-                    new Scalar(0, 255, 0));
-            String label =  String.valueOf(confidence);
-            int[] baseLine = new int[1];
-            Size labelSize = Imgproc.getTextSize(label, Core.FONT_HERSHEY_SIMPLEX, 0.5, 1, baseLine);
-            // Write class name and confidence.
-            Imgproc.putText(inputFrame, label, new Point(left, top),
-                    Core.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0));
+            if(confidence > 0.5) {
+                int classId = (int) detections.get(i, 1)[0];
+                int left = (int) (detections.get(i, 3)[0] * cols);
+                int top = (int) (detections.get(i, 4)[0] * rows);
+                int right = (int) (detections.get(i, 5)[0] * cols);
+                int bottom = (int) (detections.get(i, 6)[0] * rows);
+                Imgproc.rectangle(inputFrame, new Point(left, top), new Point(right, bottom),
+                        new Scalar(0, 255, 0));
+                String label = String.valueOf(confidence);
+                int[] baseLine = new int[1];
+                Size labelSize = Imgproc.getTextSize(label, Core.FONT_HERSHEY_SIMPLEX, 0.5, 1, baseLine);
+                // Write class name and confidence.
+                Imgproc.putText(inputFrame, label, new Point(left, top),
+                        Core.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0));
+            }
 
         }
         return inputFrame;
