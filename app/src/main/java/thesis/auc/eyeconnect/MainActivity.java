@@ -1,6 +1,7 @@
 package thesis.auc.eyeconnect;
 
 import android.content.Context;
+import android.content.res.AssetManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -13,14 +14,19 @@ import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.dnn.Dnn;
+import org.opencv.dnn.Net;
 import org.opencv.face.FaceRecognizer;
 import org.opencv.core.MatOfInt;
 import org.opencv.core.*;
 import org.opencv.face.Face;
 import org.opencv.imgcodecs.Imgcodecs;
+
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.ArrayList;
@@ -33,6 +39,7 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     private CascadeClassifier cascadeClassifier;
     private Mat grayscaleImage;
     private int absoluteFaceSize;
+    private Net net;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -76,6 +83,28 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         openCvCameraView.enableView();
     }
 
+    // Upload file to storage and return a path.
+    private static String getPath(String file, Context context) {
+        AssetManager assetManager = context.getAssets();
+        BufferedInputStream inputStream = null;
+        try {
+            // Read data from assets.
+            inputStream = new BufferedInputStream(assetManager.open(file));
+            byte[] data = new byte[inputStream.available()];
+            inputStream.read(data);
+            inputStream.close();
+            // Create copy file in storage.
+            File outFile = new File(context.getFilesDir(), file);
+            FileOutputStream os = new FileOutputStream(outFile);
+            os.write(data);
+            os.close();
+            // Return a path to file which may be read in common way.
+            return outFile.getAbsolutePath();
+        } catch (IOException ex) {
+            Log.i("Failed to upload a file","nonos");
+        }
+        return "";
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,10 +132,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public void onCameraViewStarted(int width, int height) {
-        grayscaleImage = new Mat(height, width, CvType.CV_8UC4);
-
-        // The faces will be a 20% of the height of the screen
-        absoluteFaceSize = (int) (height * 0.2);
+        String proto = getPath("deploy.prototxt.txt",this);
+        String weights = getPath("res10_300x300_ssd_iter_140000.caffemodel",this);
+        net = Dnn.readNetFromCaffe(proto,weights);
+        Log.i("Nonos","Network Loaded !!");
     }
 
     @Override
@@ -116,22 +145,35 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public Mat onCameraFrame(Mat inputFrame) {
-        // Create a grayscale image
-        Imgproc.cvtColor(inputFrame, grayscaleImage, Imgproc.COLOR_RGBA2RGB);
 
-        MatOfRect faces = new MatOfRect();
+        int height = inputFrame.height();
+        int width = 400;
+        Imgproc.resize(inputFrame,inputFrame,new Size(width,height));
+        Mat blobImage = new Mat();
+        Imgproc.resize(inputFrame,blobImage,new Size(300,300));
+        Mat blob = Dnn.blobFromImage(inputFrame,1.0, new Size(300, 300),new Scalar(104.0,177.0,123.0));
+        net.setInput(blob);
+        Mat detections = net.forward();
+        int cols = inputFrame.cols();
+        int rows = inputFrame.rows();
+        detections = detections.reshape(1,(int)detections.total() / 7);
+        for(int i=0; i < detections.rows();++i){
+            double confidence = detections.get(i,2)[0];
+            int classId = (int)detections.get(i,1)[0];
+            int left = (int) (detections.get(i,3)[0] * cols);
+            int top = (int) (detections.get(i,4)[0] * rows);
+            int right = (int) (detections.get(i,5)[0] * cols);
+            int bottom = (int) (detections.get(i,6)[0] * rows);
+            Imgproc.rectangle(inputFrame,new Point(left, top), new Point(right, bottom),
+                    new Scalar(0, 255, 0));
+            String label =  String.valueOf(confidence);
+            int[] baseLine = new int[1];
+            Size labelSize = Imgproc.getTextSize(label, Core.FONT_HERSHEY_SIMPLEX, 0.5, 1, baseLine);
+            // Write class name and confidence.
+            Imgproc.putText(inputFrame, label, new Point(left, top),
+                    Core.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0));
 
-        // Use the classifier to detect faces
-        if (cascadeClassifier != null) {
-            cascadeClassifier.detectMultiScale(grayscaleImage, faces, 1.1, 2, 2,
-                    new Size(absoluteFaceSize, absoluteFaceSize), new Size());
         }
-
-        // If there are any faces found, draw a rectangle around it
-        Rect[] facesArray = faces.toArray();
-        for (int i = 0; i <facesArray.length; i++)
-            Imgproc.rectangle(inputFrame, facesArray[i].tl(), facesArray[i].br(), new Scalar(0, 255, 0, 255), 3);
-
         return inputFrame;
     }
 
