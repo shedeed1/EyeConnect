@@ -37,9 +37,10 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     private CameraBridgeViewBase openCvCameraView;
     private CascadeClassifier cascadeClassifier;
-    private Mat grayscaleImage;
     private int absoluteFaceSize;
     private Net net;
+    private int frameH;
+    private int frameW;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -132,7 +133,8 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 
     @Override
     public void onCameraViewStarted(int width, int height) {
-        grayscaleImage = new Mat(height,width,CvType.CV_8UC4);
+        frameH = height;
+        frameW = width;
         String proto = getPath("deploy.prototxt.txt",this);
         String weights = getPath("res10_300x300_ssd_iter_140000.caffemodel",this);
         net = Dnn.readNetFromCaffe(proto,weights);
@@ -147,24 +149,25 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
     @Override
     public Mat onCameraFrame(Mat inputFrame) {
         // Get a new frame
-        Imgproc.cvtColor(inputFrame, grayscaleImage, Imgproc.COLOR_RGBA2RGB);
-        int height = grayscaleImage.height();
+        Mat frame = new Mat(frameH,frameW,CvType.CV_8UC(4));
+        Imgproc.cvtColor(inputFrame, frame, Imgproc.COLOR_RGBA2RGB);
+        int height = frame.height();
         int width = 400;
-        Imgproc.resize(grayscaleImage,grayscaleImage,new Size(width,height));
+        Imgproc.resize(frame,frame,new Size(width,height));
         Mat blobImage = new Mat();
-        Imgproc.resize(grayscaleImage,blobImage,new Size(300,300));
+        Imgproc.resize(frame,blobImage,new Size(300,300));
         Log.i("nonos1",String.valueOf(inputFrame.size()));
         Log.i("nonos2",String.valueOf(blobImage.size()));
-        Log.i("nonos3",String.valueOf(grayscaleImage.type()));
+        Log.i("nonos3",String.valueOf(inputFrame.type()));
         Mat blob = Dnn.blobFromImage(blobImage,1.0, new Size(300, 300),new Scalar(104.0,177.0,123.0));
         net.setInput(blob);
         Mat detections = net.forward();
         int cols = inputFrame.cols();
         int rows = inputFrame.rows();
         detections = detections.reshape(1,(int)detections.total() / 7);
-        for(int i=0; i < detections.rows();++i){
-            double confidence = detections.get(i,2)[0];
-            if(confidence > 0.5) {
+        for(int i=0; i < detections.rows();++i) {
+            double confidence = detections.get(i, 2)[0];
+            if (confidence > 0.5) {
                 int classId = (int) detections.get(i, 1)[0];
                 int left = (int) (detections.get(i, 3)[0] * cols);
                 int top = (int) (detections.get(i, 4)[0] * rows);
@@ -179,7 +182,6 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
                 Imgproc.putText(inputFrame, label, new Point(left, top),
                         Core.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0));
             }
-
         }
         return inputFrame;
     }
