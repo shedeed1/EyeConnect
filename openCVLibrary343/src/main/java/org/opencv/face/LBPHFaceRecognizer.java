@@ -185,8 +185,6 @@ public class LBPHFaceRecognizer extends FaceRecognizer {
         delete(nativeObj);
     }
 
-
-
     // C++:  Mat getLabels()
     private static native long getLabels_0(long nativeObj);
 

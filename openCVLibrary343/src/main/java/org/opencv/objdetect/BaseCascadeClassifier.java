@@ -20,8 +20,6 @@ public class BaseCascadeClassifier extends Algorithm {
         delete(nativeObj);
     }
 
-
-
     // native support for java finalize()
     private static native void delete(long nativeObj);
 

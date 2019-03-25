@@ -26,7 +26,6 @@ public class FaceRecognizer extends Algorithm {
         return;
     }
 
-
     //
     // C++:  void FaceRecognizer::predict(Mat src, int& label, double& confidence)
     //
@@ -43,7 +42,7 @@ public class FaceRecognizer extends Algorithm {
     }
 
 
-    //
+    //QPython
     // C++:  void FaceRecognizer::save(string filename)
     //
 
