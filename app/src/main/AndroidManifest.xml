@@ -3,19 +3,20 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="thesis.auc.eyeconnect">
 
+    <uses-sdk tools:overrideLibrary="org.opencv" />
+
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-
-    <uses-sdk tools:overrideLibrary="org.opencv"></uses-sdk>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-
         android:theme="@style/AppTheme">
+        <activity android:name=".LoadFriendsActivity"></activity>
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name"
@@ -26,8 +27,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".MjpegActivity" />
-        <activity android:name=".MjpegDetectActivity"></activity>
+        <activity android:name=".MjpegDetectActivity" />
     </application>
 
 </manifest>

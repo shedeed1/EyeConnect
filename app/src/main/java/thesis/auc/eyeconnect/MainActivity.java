@@ -1,78 +1,72 @@
 package thesis.auc.eyeconnect;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.View;
-import android.widget.Button;
+import android.widget.Toast;
 
-import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.LoaderCallbackInterface;
-import org.opencv.android.OpenCVLoader;
+import com.twitter.sdk.android.core.Callback;
+import com.twitter.sdk.android.core.DefaultLogger;
+import com.twitter.sdk.android.core.Result;
+import com.twitter.sdk.android.core.Twitter;
+import com.twitter.sdk.android.core.TwitterAuthConfig;
+import com.twitter.sdk.android.core.TwitterConfig;
+import com.twitter.sdk.android.core.TwitterException;
+import com.twitter.sdk.android.core.TwitterSession;
+import com.twitter.sdk.android.core.identity.TwitterLoginButton;
+
+
+import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
 
-    private final String TAG = MainActivity.class.getSimpleName();
-
-    private Button mjpegView;
-    private Button mjpegDetection;
-
-    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
-        @Override
-        public void onManagerConnected(int status) {
-            switch (status) {
-                case LoaderCallbackInterface.SUCCESS:
-                    Log.i(TAG, "OpenCV loaded successfully");
-                    break;
-                default:
-                    super.onManagerConnected(status);
-                    break;
-            }
-        }
-    };
+    private TwitterLoginButton loginButtonTwitter;
+    private SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        TwitterConfig config = new TwitterConfig.Builder(this)
+                .logger(new DefaultLogger(Log.DEBUG))
+                .twitterAuthConfig(new TwitterAuthConfig("YCW9ZCWlwmER0Urm8soAEUUzA", "QmwjnQDb9o2SAalJAJhjyAxhzNNuaQ7WJgmTtwn99fiRCbMk5Q"))
+                .debug(true)
+                .build();
+        Twitter.initialize(config);
+
         setContentView(R.layout.activity_main);
 
-        mjpegView = findViewById(R.id.mjpeg_view);
-        mjpegDetection = findViewById(R.id.mjpeg_detection);
+        sharedPreferences = getSharedPreferences("SHARED_PREFERENCES",0);
 
-        if (!OpenCVLoader.initDebug()) {
-            Log.e(this.getClass().getSimpleName(), "  OpenCVLoader.initDebug(), not working.");
-        } else {
-            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
-            Log.d(this.getClass().getSimpleName(), "  OpenCVLoader.initDebug(), working.");
-        }
+        loginButtonTwitter = (TwitterLoginButton) findViewById(R.id.twitterButton);
 
-        mjpegView.setOnClickListener(new View.OnClickListener() {
+        loginButtonTwitter.setCallback(new Callback<TwitterSession>() {
             @Override
-            public void onClick(View v) {
-                showMjpeg(v);
+            public void success(Result<TwitterSession> result) {
+                // Do something with result, which provides a TwitterSession for making API calls
+                SharedPreferences.Editor editor = sharedPreferences.edit();
+                editor.putString("USERNAME",result.data.getUserName());
+                editor.apply();
+
+                Intent intent = new Intent(MainActivity.this,LoadFriendsActivity.class);
+                startActivity(intent);
+            }
+
+            @Override
+            public void failure(TwitterException exception) {
+                // Do something on failure
+                Toast.makeText(MainActivity.this,"Failed",Toast.LENGTH_LONG);
             }
         });
 
-        mjpegDetection.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showMjpegDetect(v);
-            }
-        });
+    }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        loginButtonTwitter.onActivityResult(requestCode, resultCode, data);
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
 
-
-    public void showMjpeg(View view) {
-        Intent intent = new Intent( this, MjpegActivity.class );
-        startActivity(intent);
-    }
-
-
-    public void showMjpegDetect(View view) {
-        Intent intent = new Intent(this, MjpegDetectActivity.class);
-        startActivity(intent);
-    }
 }

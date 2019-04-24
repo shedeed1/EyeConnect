@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "61495768428",
+    "firebase_url": "https://eyeconnect-967ea.firebaseio.com",
+    "project_id": "eyeconnect-967ea",
+    "storage_bucket": "eyeconnect-967ea.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:61495768428:android:7564dde1c28d22fe",
+        "android_client_info": {
+          "package_name": "thesis.auc.eyeconnect"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "61495768428-s59vungcs434ru2k9klvn2i38nkcknm7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtBUNypzjpyiObmCtnYxuPziJB4jaXdbM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "61495768428-s59vungcs434ru2k9klvn2i38nkcknm7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
