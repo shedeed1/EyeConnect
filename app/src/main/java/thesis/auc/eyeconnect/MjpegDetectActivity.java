@@ -25,17 +25,18 @@ import com.google.firebase.ml.vision.common.FirebaseVisionImage;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetector;
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetectorOptions;
 import com.google.gson.Gson;
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
 import com.loopj.android.http.HttpGet;
-import com.tzutalin.dlib.Constants;
-import com.tzutalin.dlib.FaceRec;
 import com.tzutalin.dlib.VisionDetRet;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
-import org.opencv.core.Mat;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -45,6 +46,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import androidx.appcompat.app.AppCompatActivity;
 import cz.msebera.android.httpclient.HttpEntity;
@@ -61,6 +63,59 @@ import thesis.auc.eyeconnect.Twitter.TweetConverter;
 import thesis.auc.eyeconnect.mjpeg.MjpegInputStream;
 
 public class MjpegDetectActivity extends AppCompatActivity {
+
+    public static String executeRemoteCommand(
+            String username,
+            String password,
+            String hostname,
+            String tweet) throws Exception {
+
+        JSch jsch = new JSch();
+        Session session = jsch.getSession(username, hostname, 22);
+        session.setPassword(password);
+
+        // Avoid asking for key confirmation
+        Properties prop = new Properties();
+        prop.put("StrictHostKeyChecking", "no");
+        session.setConfig(prop);
+
+        session.connect();
+
+        Log.i("Shedeed6555",tweet);
+
+        // SSH Channel
+        ChannelExec channelssh = (ChannelExec) session.openChannel("exec");
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        channelssh.setOutputStream(baos);
+
+        // Execute command
+        //channelssh.setCommand("python /home/pi/OLED/python-examples/Python_ST7735/examples/image.py ");
+        channelssh.setCommand("cd /home/pi/OLED/python-examples && python tweet.py '"+tweet+"'");
+        //channelssh.setCommand("cd /home/pi/OLED/python-examples/Python_ST7735/examples/ && python image.py");
+        channelssh.connect();
+
+        try{Thread.sleep(1000);}catch(Exception ee){}
+        channelssh.disconnect();
+        session.disconnect();
+
+        return baos.toString();
+    }
+
+    private static void sendTweetToScreen(final String tweet)
+    {
+        new AsyncTask<Integer, Void, Void>() {
+            @Override
+            protected Void doInBackground(Integer... params) {
+                try {
+                    Log.i("Shedeed4",executeRemoteCommand("pi", "123", "192.168.43.128", tweet));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        }.execute(1);
+    }
+
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -270,7 +325,7 @@ public class MjpegDetectActivity extends AppCompatActivity {
             }
         }
 
-        new SetupMjpegStreamTask().execute("http://192.168.137.233:8080/stream/video.mjpeg");
+        new SetupMjpegStreamTask().execute("http://192.168.43.128:8080/stream/video.mjpeg");
     }
 
     public void stopMovie(View view) {
@@ -317,6 +372,7 @@ public class MjpegDetectActivity extends AppCompatActivity {
                 Tweet[] data = TweetConverter.fromJsonString(result);
 
                 Log.i("SHEDEEEDREC",data[0].getText());
+                sendTweetToScreen(data[0].getText());
 
             } catch (IOException e) {
                 e.printStackTrace();

@@ -59,7 +59,6 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(MainActivity.this,"Failed",Toast.LENGTH_LONG);
             }
         });
-
     }
 
     @Override
@@ -67,6 +66,4 @@ public class MainActivity extends AppCompatActivity {
         loginButtonTwitter.onActivityResult(requestCode, resultCode, data);
         super.onActivityResult(requestCode, resultCode, data);
     }
-
-
 }
